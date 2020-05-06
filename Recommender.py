@@ -6,6 +6,7 @@ from itertools import chain  # For quickly unnesting lists
 import math
 import matplotlib.pyplot as plt
 import cProfile  # For profiling
+
 # References:
 # https://www.ole.bris.ac.uk/bbcswebdav/pid-4195150-dt-content-rid-14072139_2/courses/EMAT22220_2019_TB-4/brozovsky07recommender.pdf
 # https://towardsdatascience.com/intro-to-recommender-system-collaborative-filtering-64a238194a26
