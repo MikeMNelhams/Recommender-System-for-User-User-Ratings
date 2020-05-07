@@ -1,6 +1,6 @@
 # Recommender-System-for-User-User-Ratings
 
-To use the code, change the globals listed under 'MAIN'. 
+# To use the code, change the globals listed under 'MAIN' in 'recommender.py'. 
 
 # ~~ Globals ~~
 gammaG = 2     | The normalizing factor used in the sigmoid normalizing function
