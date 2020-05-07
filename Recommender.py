@@ -69,7 +69,7 @@ def get_ratings_vector(data_input, user, indices):
     # If the indices vector is precompiled
     if user == user_max:
         # The exception is the last case
-        pointer_start = indices[user_max]
+        pointer_start = indices[user_max-1]
         pointer_end = data_length
     else:
         # The users are shifted one from the user indexes
@@ -92,37 +92,6 @@ def get_rating_target(data_input, user, target, indices):
                 output = rating[1]
                 return output
 
-    return output
-
-
-def get_mean_rating_target(data_input, target, default_mean):
-    # Return the mean rating for the target in the data Nx3 matrix
-    total_ratings = []
-    for rating in data_input:
-        if rating[1] == target:
-            total_ratings.append(rating[2])
-    n = len(total_ratings)
-
-    # If the target was never rated, calculate the mean value and use this as the default
-    if np.size(total_ratings) == 0:
-        # The default rating is neither 0 nor 5 and it is important not to use either
-        return default_mean
-
-    output = sum(total_ratings)/n
-    return output
-
-
-def get_mean_rating_target2(data_input, target, default_mean):
-    # Return the mean rating for the target in the data Nx3 matrix
-    total_ratings = [rating[2] for rating in data_input if rating[1] == target]
-    n = len(total_ratings)
-
-    # If the target was never rated, calculate the mean value and use this as the default
-    if np.size(total_ratings) == 0:
-        # The default rating is either 0, 5 or total mean
-        return default_mean
-
-    output = sum(total_ratings) / n
     return output
 
 
@@ -172,38 +141,6 @@ def get_overlapped_users(data_input, a, j, indices):
     return overlapped_users
 
 
-def pearson_correlation(data_input, a, r_a_mean, j, indices, default_mean):
-    # Return the pearson correlation between the two users, summed over the users that a and j have both rated
-    # Formula is online
-    # Default mean can be toggled (mean of a user w/o ratings)
-    # print('Calculating the pearson correlation')
-
-    overlap = get_overlapped_users(data_input, a, j, indices)
-    r_j_mean = get_mean_rating_target3(data_input, j, indices, default_mean)
-
-    # print('a: ', a, 'mean a: ', r_a_mean, ' j: ', j,  'mean j: ', r_j_mean)
-    # Very unlikely but just a fail-safe
-    if not overlap:
-        return 0
-
-    numerator_sum = 0
-    denominator_sum1 = 0
-    denominator_sum2 = 0
-    for i in overlap:
-        r_a_i = get_rating_target(data_input, a, i, indices)
-        r_j_i = get_rating_target(data_input, j, i, indices)
-        # b1 = r_a_i - r_a_mean
-        # b2 = r_j_i - r_j_mean
-        numerator_sum += (r_a_i - r_a_mean)*(r_j_i - r_j_mean)
-        denominator_sum1 += (r_a_i - r_a_mean)**2
-        denominator_sum2 += (r_j_i - r_j_mean)**2
-        # print('numerator_sum: ', numerator_sum)
-
-    output = numerator_sum / math.sqrt((denominator_sum1*denominator_sum2))
-    # print('output: ', output)
-    return output
-
-
 def pearson_correlation2(data_input, a, r_a_mean, j, indices1, indices2, default_mean):
     # Return the pearson correlation between the two users, summed over the users that a and j have both rated
     # Formula is online
@@ -236,32 +173,6 @@ def pearson_correlation2(data_input, a, r_a_mean, j, indices1, indices2, default
     return output
 
 
-def euclidean_distance(v_1, t):
-    # Return the euclidean distance between the two vectors, missing overlap only squares the number
-    # Input v_1 is an Nx2 rating vector and Input t is an Nx2 rating vector
-    # If a rating does not overlap, then do the square of the rating
-    v_1_length = np.size(v_1, 0)  # Number of ratings in vector v_1
-    t_length = np.size(t, 0)  # Number of ratings in vector t
-
-    # Sum the euclidean distances between the two vectors
-    distance = 0
-
-    # First sum through v_1 / t and v_1 intersect t
-    for i in range(v_1_length):
-        if v_1[i][0] in t[:, [1]]:
-            # distance += (v_1[i][1] - t[np.where(t[:, [0]] == v_1[i][0])][1])**2
-            distance += (v_1[i][1] - t[where(t, v_1[i][0])][1])**2
-        else:
-            distance += v_1[i][1]**2
-
-    # Sum through t / v_1
-    for i in range(t_length):
-        if t[i][0] not in v_1:
-            distance += t[i][1]**2
-
-    return distance
-
-
 def euclidean_distance2(v_1, t):
     # Return the euclidean distance between the two vectors, missing overlap only squares the number
     # Input v_1 is an Nx2 rating vector and Input t is an Nx2 rating vector
@@ -278,49 +189,12 @@ def euclidean_distance2(v_1, t):
     return output
 
 
-def filter_overlap(data_input, user, min, indices):
-    # Input a data set, minimum overlaps and the user we can comparing overlaps
-    # Perform with dictionary operations
-    # Not an efficient algorithm yet
-    print('Compiling overlap ...')
-
-    # Convert user to a dictionary
-    user_d = convert_to_dict(get_ratings_vector(data, user, indices))
-    user_d_keys = set(user_d.keys())
-
-    # Allocate the memory for the filtered data list
-    output = []
-
-    # Loop through the data, convert them to dictionaries, perform the intersect and see if this exceeds the length
-    for i in data_input:
-        i_r = get_ratings_vector(data, i[0], indices)
-        i_r_d = convert_to_dict(i_r)
-
-        # Calculate the intersect of the two dictionaries
-        i_r_d_keys = set(i_r_d.keys())
-        intersection = user_d_keys & i_r_d_keys
-        if len(intersection) > min:
-            output.append(i)
-
-
-def where(vector, query):
-    # Return the first index where the vector element is equal to the query
-    # Sadly this function is FAR faster than the numpy np.where() in-built function
-    j = 0
-    for i in vector:
-        if i == query:
-            return j
-    j += 1
-    return 0
-
-
 def knn(data_input, user, indices, min0=1, maxN=50):
     # Find the K-Nearest-Neighbours for input user 'user'
     # Minimum of min0 overlaps and a Maximum of maxN neighbours
     # Predefine the array for time complexity O(N) rather than resorting the list for a minimum of O(N^2)
     # Last user is the number of users for which you can do non-trivial euclidean distances for
-    print('Compiling the knn euclidean distance ranking, roughly 30 seconds ...')
-    print('KNN user: ', user)
+    print('Compiling the knn euclidean distance ranking, roughly 30 seconds...')
     data_length = data_input[-1][0]
     knn_rank_vector = np.zeros((data_length - 1, 2))  # Predefine the array to save time
 
@@ -343,119 +217,7 @@ def knn(data_input, user, indices, min0=1, maxN=50):
     return output
 
 
-def calculate_predictions(data_input, user_range, a, min0, maxN, gamma):
-    # Correct Algorithm
-    # Precompile the indexes vector of the start of all of the users, in order to speed up calculations
-    indexes_vector = get_indices(data)
-
-    # The default rating is neither 0 nor 5 and it is important not to use either
-    total_mean = np.mean(data_input[:, [2]])
-    print('Total mean: ', total_mean)
-
-    # Calculate the predicted ratings of a on all the users in the data set
-    r_a_mean = get_mean_rating_target(data, a, total_mean)  # Mean rating of the active user
-
-    # Takes about 30 seconds per KNN calculation, however it is taken OUT of the loop
-    knn_users = knn(data_input, a, indexes_vector, min0, maxN)
-
-    # Loop through all of the users
-    predictions = []
-    for j in user_range:
-
-        beta_total = 0
-        for n in knn_users:
-            # PMCC value ranges between -1 and 1
-            m1 = pearson_correlation(data_input, a, r_a_mean, n, indexes_vector, total_mean)
-
-            # KNN value ranges between -10 and 10
-            r_n_j = get_rating_target(data_input, n, j, indexes_vector)
-            r_n_mean = get_mean_rating_target(data_input, n, total_mean)
-            m2 = r_n_j - r_n_mean
-
-            # m1*m2 ranges between -10 and 10
-            beta_total += m1*m2
-
-            print('m1: ', m1, ' m2: ', m2)
-
-        # k Is the number of K-Nearest Neighbours
-        k = np.size(knn_users, 0)
-
-        # Normalizing factor to take the mean of the values, otherwise -k*10 < 10*(k+1)
-        normalizing_factor = 1 / k
-
-        # Prediction value 1, for a rating j. Ranges from -10 < p < 20 (NOT NORMALIZED)
-        p_a_j = r_a_mean + normalizing_factor*beta_total
-
-        # Prediction value 2, for a rating j. Ranges from 0 < p < 10 (NORMALIZED) 1 < G < 3 optimal
-        p_a_j2 = 10 / (1 + np.exp(- (p_a_j / gamma)))
-        # p_a_j3 = 10 / (1 + math.exp(- (p_a_j / gamma)))
-        print('p before: ', p_a_j, ' p after: ', p_a_j2)
-        predictions.append(p_a_j2)
-
-    return predictions
-
-
-def calculate_predictions2(data_input, user_range, a, min0, maxN, gamma):
-    # Correct Algorithm, faster than predic2 by ~50%
-    # Precompile the indexes vector of the start of all of the users, in order to speed up calculations
-    indexes_vector = get_indices(data)
-
-    # The default rating is neither 0 nor 5 and it is important not to use either
-    total_mean = np.mean(data_input[:, [2]])
-    print('Total mean: ', total_mean)
-
-    # Calculate the predicted ratings of a on all the users in the data set
-    r_a_mean = get_mean_rating_target2(data, a, total_mean)  # Mean rating of the active user
-
-    # Takes about 30 seconds per KNN calculation, however it is taken OUT of the loop
-    knn_users = knn(data_input, a, indexes_vector, min0, maxN)
-
-    # Calculate the PMCC values and n_mean values outside of the j-loop to increase efficiency
-    m1_vector = []
-    m2_vector = []
-    n_mean_vector = []
-    for n in knn_users:
-        # PMCC value ranges between -1 and 1
-        m1 = pearson_correlation(data_input, a, r_a_mean, n, indexes_vector, total_mean)
-        m1_vector.append(m1)
-        n_mean_vector.append(get_mean_rating_target2(data_input, n, total_mean))
-
-    # k Is the number of K-Nearest Neighbours
-    k = np.size(knn_users, 0)
-
-    # Normalizing factor to take the mean of the values, otherwise -k*10 < 10*(k+1)
-    normalizing_factor = 1 / k
-
-    # Loop through all of the users
-    predictions = []
-    for j in user_range:
-
-        counter = 0
-        beta_total = 0
-        for n in knn_users:
-            m1 = m1_vector[counter]
-            # KNN value ranges between -10 and 10
-            r_n_j = get_rating_target(data_input, n, j, indexes_vector)
-            m2 = r_n_j - n_mean_vector[counter]
-
-            # m1*m2 ranges between -10 and 10
-            beta_total += m1*m2
-
-            # print('m1: ', m1, ' m2: ', m2)
-            counter += 1  # Increase the m1_vector counter
-
-        # Prediction value 1, for a rating j. Ranges from -10 < p < 20 (NOT NORMALIZED)
-        p_a_j = r_a_mean + normalizing_factor*beta_total
-
-        # Prediction value 2, for a rating j. Ranges from 0 < p < 10 (NORMALIZED) 1 < G < 3 optimal
-        p_a_j2 = 10 / (1 + np.exp(- (p_a_j / gamma)))
-        print('p before: ', p_a_j, ' p after: ', p_a_j2)
-        predictions.append(p_a_j2)
-
-    return predictions
-
-
-def calculate_predictions3(data_input, user_range, a, min0=1, maxN=50, gamma=2, s=5):
+def calculate_predictions3(data_input, user_range, a, min0=1, maxN=50, gamma=2, s=5, gc=0):
     # Correct Algorithm, faster than predic2 by ~50%
     # Precompile the indexes vector of the start of all of the users, in order to speed up calculations
     indexes_vector = get_indices(data)
@@ -497,6 +259,9 @@ def calculate_predictions3(data_input, user_range, a, min0=1, maxN=50, gamma=2, 
 
     # Loop through all of the users
     predictions = []
+    predictions2 = []
+    num_ratings = []
+    increases = []
     for j in user_range:
 
         counter = 0
@@ -513,55 +278,166 @@ def calculate_predictions3(data_input, user_range, a, min0=1, maxN=50, gamma=2, 
             # print('m1: ', m1, ' m2: ', m2)
             counter += 1  # Increase the m1_vector counter
 
-        # Prediction value 1, for a rating j. Ranges from -10 < p < 20 (NOT NORMALIZED)
-        p_a_j = r_a_mean + normalizing_factor*beta_total
+        # Calculate the bias for j, formula in the report
+        r_j = get_ratings_vector(data_input, j, indexes_vector)
+        b = np.size(r_j) / 2
+        num_ratings.append(b)  # Add the number of ratings for plotting increase vs number of ratings
+        b = total_mean / (1 + b)
+
+        # Prediction value 1, for a rating j. Ranges from -10 < p <= 21 (NOT NORMALIZED)
+        # With Bias
+        p_a_j = r_a_mean + normalizing_factor*beta_total + b
         p_a_j = p_a_j[0]
+        # Without Bias
+        p2_a_j = r_a_mean + normalizing_factor * beta_total
+        p2_a_j = p2_a_j[0]
 
         # Prediction value 2, for a rating j. Ranges from 0 < p < 10 (NORMALIZED) 1 < G < 3 optimal
         p_a_j2 = 10 / (1 + math.exp(- (p_a_j / gamma)))
-        printable = 'p before: %s    p after: %s' % (p_a_j, p_a_j2)  # Faster than string concatenation with +
-        # print(printable)
+        p2_a_j2 = 10 / (1 + math.exp(- (p2_a_j / gamma)))
+
+        printable = 'Target user: %s,    p: %s,    \u03C3(p): %s' % (j, round(p_a_j, 4), round(p_a_j2, 4))
+        print(printable)
         predictions.append(p_a_j2)
+        predictions2.append(p2_a_j2)
+        increases.append(p_a_j2 - p2_a_j2)
 
     col_1 = np.array(user_range)
     col_2 = np.array(predictions)
+    col_1_2 = col_1
+    col_2_2 = np.array(predictions2)
 
-    # print(col_1)
-    # print(col_2)
+    #  ~~~~ Attach the users to their predictions along the columns
+    p_values = np.column_stack((col_1, col_2))  # With Bias
+    p_values2 = np.column_stack((col_1_2, col_2_2))  # Without Bias
 
-    # Attach the users to their predictions along the columns
-    p_values = np.column_stack((col_1, col_2))
-
-    # Sort the list then reverse the list (biggest at 0)
+    #  ~~~~ Sort the list then reverse the list (biggest at 0)
+    # With Bias
     p_values = p_values[p_values[:, 1].argsort(kind='mergesort')]
     p_values = np.flipud(p_values)
 
-    # Remove all the values from the predictions which are a itself or that a has already rated or a null value (0)
-    p_values_temp = np.zeros(np.shape(p_values))  # Predefine the array to be overwritten to save time
+    # Without Bias
+    p_values2 = p_values2[p_values2[:, 1].argsort(kind='mergesort')]
+    p_values2 = np.flipud(p_values2)
+
+    # ~~~~ Remove all the values from the predictions which are a itself or that a has already rated or a null value (0)
+    # Copy the p_values array, then add only the desired values to the temp, then copy the temp array
+    # (avoids dynamic 'for loop' sizing errors)
+
+    # With Bias
+    p_values_temp1 = []  # First column
+    p_values_temp2 = []  # Second column
     i = 0
     for p in p_values:
-        if (int(p[0]) != a) and (p[0] not in r_a[:, [0]]) and p[0] != 0:
-            p_values_temp[i] = p
+        if (p[1] > gc) and (int(p[0]) != a) and (p[0] not in r_a[:, [0]]):
+            p_values_temp1.append(p[0])
+            p_values_temp2.append(p[1])
         i += 1
 
-    p_values = p_values_temp  # Change to the temporary array
+    # Without Bias
+    p_values_temp3 = []  # First column (2)
+    p_values_temp4 = []  # Second Column (2)
+    i = 0
+    for p in p_values2:
+        if (p[1] > gc) and (int(p[0]) != a) and (p[0] not in r_a[:, [0]]):
+            p_values_temp3.append(p[0])
+            p_values_temp4.append(p[1])
+        i += 1
 
-    # Print the top S predictions
-    for i in range(s):
-        print(p_values[i][0])
-        s += 1
+    p_values_temp1 = np.array(p_values_temp1)
+    p_values_temp2 = np.array(p_values_temp2)
+    p_values_temp3 = np.array(p_values_temp3)
+    p_values_temp4 = np.array(p_values_temp4)
+
+    p_values_temp = np.column_stack((p_values_temp1, p_values_temp2))
+    p_values = p_values_temp
+
+    p_values_temp = np.column_stack((p_values_temp3, p_values_temp4))
+    p_values2 = p_values_temp
+
+    print(' ')
+
+    # Print the top S predictions (With Bias)
+    print(' ~~~~~~ WITH BIAS ~~~~~~')
+    print('Top {} predictions'.format(s))
+    if np.size(p_values) == 0:
+        print('No Bias Predictions')
+    else:
+        for i in range(s):
+            print('User: {}. Rating: {}.'.format(int(p_values[i][0]), round(p_values[i][1], 4)))
+
+    print(' ')
+
+    # Print the top S predictions (Without Bias)
+    print(' ~~~~~~ WITHOUT BIAS ~~~~~~')
+    print('Top {} predictions'.format(s))
+    if np.size(p_values2) == 0:
+        print('No non-bias Predictions')
+    else:
+        for i in range(s):
+            print('User: {}. Rating: {}.'.format(int(p_values2[i][0]), round(p_values2[i][1], 4)))
+
+    # ~~~~~~ Plot the data Functions~~~~~~
+    # plot_predictions(a, p_values, p_values2)
+    # plot_boxplot(a, p_values, p_values2)
+    # plot_increase(a, increases, num_ratings)
 
     return p_values
 
 
-def plot_predictions(data_input, user_range, a, predictions):
+def plot_predictions(a, predictions, predictions2):
     # Plot a graph of the predictions versus the number of ratings each user has
+    # Predictions is WITH bias
+    # Predictions2 is WITHOUT bias
     # VOID function
     x = predictions[:, [0]]
     y = predictions[:, [1]]
-    print('x: ', x)
-    print('y: ', y)
-    plt.scatter(x, y)
+
+    x2 = predictions2[:, [0]]
+    y2 = predictions2[:, [1]]
+
+    # The first scatter plot without biases
+    p1 = plt.scatter(x, y, marker="x", c='blue')
+    # p2 = plt.scatter(x2, y2, marker="x")
+
+    # Title the plot and axes automatically based on the active user:
+    title = "Predictions with biases for active user {} ordered by target users".format(a)
+    plt.title(title)
+    plt.ylabel('Prediction \u03C3($P_{a,j}$)')
+    plt.xlabel('Target user j')
+    # plt.legend(['With Bias', 'Without Bias'])
+
+    plt.show()
+    return 0
+
+
+def plot_boxplot(a, predictions, predictions2):
+    # Plot a boxplot of the predictions
+    # VOID function
+    y1 = predictions[:, [1]]
+    y2 = predictions2[:, [1]]
+
+    fig1, ax1 = plt.subplots()
+
+    plots = [y1, y2]
+    ax1.boxplot(plots, whis=[0, 100], labels=['With bias', 'Without Bias'], vert=False)
+
+    # Graph formatting
+    title = 'Comparing boxplots of the predictions for active user {}'.format(a)
+    ax1.set_title(title)
+    ax1.set_xlabel('Prediction \u03C3($P_{a,j}$)')
+
+    plt.show()
+    return 0
+
+
+def plot_increase(a, increasesv, num_ratingsv):
+    # Plot the increase against the number of ratings
+    # VOID function
+    plt.scatter(num_ratingsv, increasesv)
+    plt.xlabel('Number of ratings of each target user j')
+    plt.ylabel('Increase in prediction \u0394\u03C3($P_{a,j}$)')
+    plt.title('Plotting the increase in prediction against the number of ratings for active user {}'.format(a))
     plt.show()
     return 0
 
@@ -576,12 +452,13 @@ def plot_predictions(data_input, user_range, a, predictions):
 
 
 # ~~ Globals ~~
-# users that have not rated are classed as 'non-comparisons' right now
-gammaG = 2  # The normalizing factor puts the similarity into proportion with the mean rating
+# Users that have not rated are classed as 'non-comparisons' right now
+gammaG = 2  # The normalizing factor used in the sigmoid normalizing function
 aG = 1  # Active user we a recommending users to
-min0G = 1  # Minimum number of common ratings between users necessary to calculate user-user similarity
-maxNG = 5  # Maximum number of user neighbours to be used during the computation
-sG = 5  # The top s predictions will be printed
+min0G = 1  # Minimum number of common ratings between users necessary to calculate user-user similarity (Unused)
+maxNG = 40  # Maximum number of user neighbours to be used during the computation
+sG = 10  # The top s predictions will be printed
+GCG = 0  # The graph cutoff, won't show values less than GCG
 
 # ~~ Main Code ~~
 # Load the ratings data
@@ -593,22 +470,11 @@ data = dataF.to_numpy()  # Convert from a DataFrame to a numpy array
 users = np.unique(data[:, 0])  # Trim any duplicates in the array
 num_users = users[-1]  # The number of users will be the last user that rated people
 
-print('Number of users: ', len(users))
+print('Total number of users: ', len(users))
 
-# print(filter_overlap(data, a, 1, indexes_vector))
-# cProfile.run('knn(data, a, indexes_vector, 0, 5)')
-
-# knn_vector = knn(data, 3, indexes_vector, min0G, maxNG)
-# print(knn_vector)
-
-# The predictions dataset
+# The predictions data set
 user_rangeG = [x for x in range(1, num_users + 1) if x != aG]
-# print('user range: ', user_rangeG)
 
-# cProfile.run('calculate_predictions3(data, user_rangeG, a, min0G, maxNG, gamma)')
 # Calculate and print the top # 'sG' predictions
-P = calculate_predictions3(data, user_rangeG, aG, min0G, maxNG, gammaG, sG)
-
-# plot_predictions(data, user_rangeG, aG, P)
-
-
+# P = calculate_predictions3(data, user_rangeG, aG, min0G, maxNG, gammaG, sG, GCG)  # Profiling
+cProfile.run('calculate_predictions3(data, user_rangeG, aG, min0G, maxNG, gammaG, sG, GCG)')
