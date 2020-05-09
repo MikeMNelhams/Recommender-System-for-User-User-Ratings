@@ -2,7 +2,7 @@
 
 # To use the code, change the globals listed under 'MAIN' in 'recommender.py'. 
 
-# ~~ Globals ~~
+#  Globals 
 gammaG = 2     | The normalizing factor used in the sigmoid normalizing function
 
 aG = 1         | Active user we a recommending users to
