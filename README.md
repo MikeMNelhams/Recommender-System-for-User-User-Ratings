@@ -16,4 +16,5 @@ GCG = 0        | The graph cutoff, won't show values less than GCG
 # References
 
 http://www.occamslab.com/petricek/papers/dating/brozovsky07recommender.pdf
+
 http://www.occamslab.com/petricek/data/
