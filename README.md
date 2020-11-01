@@ -15,7 +15,7 @@ GCG = 0        | The graph cutoff, won't show values less than GCG
 
 # Notes
 
-All of the code was written by myself and all credit for the improved model goes to me.
+All of the code was written by myself and all credit for the improvements made to the existing model goes to me.
 
 # References
 
