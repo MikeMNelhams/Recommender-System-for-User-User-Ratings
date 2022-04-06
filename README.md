@@ -22,3 +22,7 @@ All of the code was written by myself and all credit for the improvements made t
 http://www.occamslab.com/petricek/papers/dating/brozovsky07recommender.pdf
 
 http://www.occamslab.com/petricek/data/
+
+***
+
+![PaperPreviewSample](/MDM2____Project_4____Cupid_s_Arrow_Page_10.png)
